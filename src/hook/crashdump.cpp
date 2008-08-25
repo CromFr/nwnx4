@@ -146,7 +146,7 @@ RegisterCrashDumpHandler(
 
 	if (Section == INVALID_HANDLE_VALUE)
 	{
-//		DebugPrint( "Failed to create section, %lu\n", GetLastError() );
+		//DebugPrint( "Failed to create section, %lu\n", GetLastError() );
 
 		return false;
 	}
@@ -161,7 +161,7 @@ RegisterCrashDumpHandler(
 
 	if (!g_CrashDumpSectionView)
 	{
-//		DebugPrint( "Failed to map section view, %lu\n", GetLastError() );
+		//DebugPrint( "Failed to map section view, %lu\n", GetLastError() );
 
 		CloseHandle( Section );
 

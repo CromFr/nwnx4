@@ -1,6 +1,7 @@
 /***************************************************************************
     NWNX Hook - Responsible for the actual hooking
     Copyright (C) 2007 Ingmar Stieger (Papillon, papillon@nwnx.org)
+	Copyright (C) 2008 Skywing (skywing@valhallalegends.com)
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -21,9 +22,12 @@
 #if !defined(HOOK_H_INCLUDED)
 #define HOOK_H_INCLUDED
 
+#define _STRSAFE_NO_DEPRECATE
+
 #include <windows.h>
 #include <stdio.h>
 #include <tchar.h>
+#include <strsafe.h>
 #include "wx/dir.h"
 #include "wx/hashset.h"
 #include "wx/tokenzr.h"
@@ -103,5 +107,40 @@ void init();
 static int (WINAPI * TrueWinMain)(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	LPSTR lpCmdLine, int nCmdShow) = NULL;
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved);
+
+
+/*
+ * Forwards.
+ */
+
+bool
+RegisterCrashDumpHandler(
+	);
+
+bool
+WaitForServerInitialization(
+	);
+
+
+void
+DebugPrint(
+	__in const char *Format,
+	...
+	);
+
+void
+DebugPrintV(
+	__in const char *Format,
+	__in va_list Ap
+	);
+
+
+/*
+ * Globals
+ */
+
+extern HMODULE             g_Module;
+extern volatile LONG       g_InCrash;
+extern PCRASH_DUMP_SECTION g_CrashDumpSectionView;
 
 #endif

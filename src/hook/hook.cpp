@@ -1,6 +1,7 @@
  /***************************************************************************
     NWNX Hook - Responsible for the actual hooking
     Copyright (C) 2007 Ingmar Stieger (Papillon, papillon@nwnx.org)
+	Copyright (C) 2008 Skywing (skywing@valhallalegends.com)
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -42,6 +43,50 @@ volatile LONG       g_InCrash;
 PCRASH_DUMP_SECTION g_CrashDumpSectionView;
 
 /***************************************************************************
+    Debug output to the debugger before we can use wx logging safely.
+***************************************************************************/
+
+void
+DebugPrint(
+	__in const char *Format,
+	...
+	)
+{
+	va_list Ap;
+
+	va_start( Ap, Format );
+
+	DebugPrintV( Format, Ap );
+
+	va_end( Ap );
+}
+
+void
+DebugPrintV(
+	__in const char *Format,
+	__in va_list Ap
+	)
+{
+	CHAR Message[ 4096 ];
+
+	//
+	// Let's not clutter up things if a user mode debugger isn't present.
+	//
+
+	if (!IsDebuggerPresent())
+		return;
+
+	StringCbVPrintfA(
+		Message,
+		sizeof( Message ),
+		Format,
+		Ap
+		);
+
+	OutputDebugStringA( Message );
+}
+
+/***************************************************************************
     Fake export function for detours
 ***************************************************************************/
 
@@ -55,19 +100,45 @@ void dummy()
     Hooking functions
 ***************************************************************************/
 
+ULONG
+FindPatternExceptionFilter(
+	__in ULONG ExceptionCode
+	)
+{
+	switch (ExceptionCode)
+	{
+
+	case STATUS_ACCESS_VIOLATION:
+	case STATUS_IN_PAGE_ERROR:
+		return EXCEPTION_EXECUTE_HANDLER;
+
+	default:
+		return EXCEPTION_CONTINUE_EXECUTION;
+
+	}
+}
+
 unsigned char* FindPattern(const unsigned char* pattern)
 {
 	int i;
 	int patternLength = (int)strlen((char*)pattern);
-	unsigned char* ptr = (unsigned char*) 0x400000;
+	unsigned char* ptr = (unsigned char*) GetModuleHandle( 0 );
+	unsigned char* end = ptr + 0x400000; // hack
 
-	while (ptr < (unsigned char*) 0x800000)
+	__try
 	{
-		for (i = 0; i < patternLength && ptr[i] == pattern[i]; i++);
-        if (i == patternLength)
-			return ptr;
-		else
-			ptr++;
+		while (ptr < end)
+		{
+			for (i = 0; i < patternLength && ptr[i] == pattern[i]; i++);
+			if (i == patternLength)
+				return ptr;
+			else
+				ptr++;
+		}
+	}
+	__except( FindPatternExceptionFilter( GetExceptionCode() ) )
+	{
+		return NULL;
 	}
 
 	return NULL;
@@ -420,14 +491,6 @@ void init()
 	wxString logfile = *nwnxhome + wxT("\\nwnx.txt");
 	logger = new wxLogNWNX(logfile, header);
 
-	// signal controller that we are ready
-	if (!SetEvent(shmem->ready_event))
-	{
-		wxLogMessage(wxT("* SetEvent failed (%d)"), GetLastError());
-		return;
-	}
-	CloseHandle(shmem->ready_event);
-
 	// open ini file
 	wxString inifile = *nwnxhome + wxT("\\nwnx.ini"); 
 	wxLogTrace(TRACE_VERBOSE, wxT("Reading inifile %s"), inifile);
@@ -551,6 +614,7 @@ void init()
 	wxLogMessage(wxT("* NWNX4 activated."));
 }
 
+
 /***************************************************************************
     Plugin handling
 ***************************************************************************/
@@ -667,6 +731,73 @@ void loadPlugins()
     Redirected EXE Entry point 
 ***************************************************************************/
 
+HWND
+createNotificationWindow()
+{
+	wxString   className, windowName;
+	WNDCLASSEX wc;
+	ATOM       aWc;
+	ULONG      pid;
+	HWND       hwnd;
+
+	pid = GetCurrentProcessId();
+
+	className.Printf(wxT("NWNXServerClass %lu"), pid);
+	windowName.Printf(wxT("NWNXServerWindow %lu"), pid);
+
+	/*
+	 * Create a dummy window with a known name.  This allows the controller to
+	 * know when we are processing messages, as we don't run a message loop
+	 * before NWN2Server initializes the main message loop.
+	 *
+	 * Note that we can use DefWindowProc because we only care about sending a
+	 * WM_NULL message to verify that NWN2Server's message loop is running.
+	 */
+
+	wc.cbSize          = sizeof( WNDCLASSEX );
+	wc.style           = 0;
+	wc.lpfnWndProc     = DefWindowProc;
+	wc.cbClsExtra      = 0;
+	wc.cbWndExtra      = 0;
+	wc.hInstance       = (HINSTANCE)g_Module;
+	wc.hIcon           = 0;
+	wc.hCursor         = 0;
+	wc.hbrBackground   = (HBRUSH)(COLOR_WINDOW + 1);
+	wc.lpszMenuName    = 0;
+	wc.lpszClassName   = className.c_str();
+	wc.hIconSm         = 0;
+
+	aWc = RegisterClassEx( &wc );
+
+	if (aWc == NULL)
+	{
+		OutputDebugStringA( "createNotificationWindow(): RegisterClassEx fails\n" );
+		return 0;
+	}
+
+	hwnd = CreateWindowEx(
+		0,
+		className.c_str(),
+		windowName.c_str(),
+		0,
+		CW_USEDEFAULT,
+		CW_USEDEFAULT,
+		CW_USEDEFAULT,
+		CW_USEDEFAULT,
+		0,
+		0,
+		(HINSTANCE)g_Module,
+		0);
+
+	if (hwnd == NULL)
+	{
+		OutputDebugStringA( "createNotificationWindow(): CreateWindowEx fails\n" );
+		UnregisterClass( className.c_str(), (HINSTANCE)g_Module );
+	}
+
+	return hwnd;
+}
+
 int WINAPI NWNXWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 					   LPSTR lpCmdLine, int nCmdShow)
 {
@@ -688,6 +819,8 @@ int WINAPI NWNXWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
 	    if (shmem)
 		{
+			HWND  hwnd;
+
 			//
 			// Start the crash dump client first off, as the controller will try and
 			// connect to it after we acknowledge booting.
@@ -702,6 +835,24 @@ int WINAPI NWNXWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 			nwnxhome = new wxString(shmem->nwnx_home);
 
 			init();
+
+			//
+			// Create the notification window now, so that we may poll for the message
+			// loop to be ready.
+			//
+
+			hwnd = createNotificationWindow();
+
+			//
+			// Signal controller that we are ready.  This unblocks the
+			// controller process.
+			//
+
+			if (!SetEvent(shmem->ready_event))
+				wxLogMessage(wxT("* SetEvent failed (%d)"), GetLastError());
+
+			CloseHandle(shmem->ready_event);
+
 			break;
 		}
     }
@@ -712,7 +863,7 @@ int WINAPI NWNXWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
 	if (!shmem)
 	{
-		//DebugPrint( "NWNXWinMain(): Failed to connect to controller!\n" );
+		DebugPrint( "NWNXWinMain(): Failed to connect to controller!\n" );
 		ExitProcess( ERROR_DEVICE_NOT_CONNECTED );
 	}
 
