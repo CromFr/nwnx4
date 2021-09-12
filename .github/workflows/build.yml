@@ -11,6 +11,8 @@ jobs:
   build:
     name: Build
     runs-on: windows-latest
+    env:
+      VCPKG_BINARY_SOURCES: 'clear;nuget,GitHub,readwrite'
     steps:
       - uses: actions/checkout@v2
         with:
@@ -39,8 +41,9 @@ jobs:
           path: vcpkg_installed/
           key: "vcpkg.json-${{ hashFiles('vcpkg.json') }}"
 
-      - name: ↳ Install CMake
-        uses: lukka/get-cmake@latest
+      # - name: ↳ Install CMake
+      #   if: steps.vcpkg_cache.outputs.cache-hit != 'true'
+      #   uses: lukka/get-cmake@latest
 
       - name: ↳ Setup VCPKG
         if: steps.vcpkg_cache.outputs.cache-hit != 'true'
@@ -48,7 +51,48 @@ jobs:
         with:
           setupOnly: true
           doNotCache: true
-          vcpkgArguments: "--triplet=x86-windows-static-md --disable-metrics"
+          vcpkgArguments: "--triplet=x86-windows-static-md --disable-metrics --clean-after-build"
+
+      - name: ↳ Setup NuGet cache for vcpkg'
+        if: steps.vcpkg_cache.outputs.cache-hit != 'true'
+        shell: 'bash'
+        run: |
+          $(./vcpkg/vcpkg fetch nuget | tail -n 1) \
+            sources add \
+            -source "https://nuget.pkg.github.com/nwn2dev/index.json" \
+            -storepasswordincleartext \
+            -name "GitHub" \
+            -username "nwn2dev" \
+            -password "${{ secrets.GITHUB_TOKEN }}"
+
+      # # Install vcpkg dependencies
+      # - name: ↳ Install GRPC
+      #   if: steps.vcpkg_cache.outputs.cache-hit != 'true'
+      #   timeout-minutes: 120
+      #   shell: bash
+      #   run: |
+      #     mv vcpkg.json vcpkg.json_
+      #     vcpkg/vcpkg.exe install grpc --triplet=x86-windows-static-md --disable-metrics --clean-after-build
+
+      #     # while tasklist | grep -q vcpkg.exe; do
+      #     #   echo "$(wmic OS get FreePhysicalMemory | tr '\r\n' ' ')"
+      #     #   sleep 2
+      #     # done
+
+      #     # wait
+
+      #     mv vcpkg.json_ vcpkg.json
+      # - name: Check disk space
+      #   if: always()
+      #   shell: bash
+      #   run: |
+      #     df -h
+      # - name: Upload grpc build logs
+      #   if: always()
+      #   uses: actions/upload-artifact@v2
+      #   with:
+      #     path: vcpkg/buildtrees/grpc/*.log
+      #     name: grpc-build-logs
 
       # Install vcpkg dependencies
       - name: ↳ Install & build dependencies
@@ -56,7 +100,7 @@ jobs:
         timeout-minutes: 120
         shell: bash
         run: |
-          vcpkg/vcpkg.exe install --triplet=x86-windows-static-md --disable-metrics
+          vcpkg/vcpkg.exe install --triplet=x86-windows-static-md --disable-metrics --clean-after-build
 
       - name: Meson Configure
         run: |
