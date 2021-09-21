@@ -69,6 +69,12 @@ jobs:
         run: |
           vcpkg/vcpkg.exe install --triplet=x86-windows-static-md --disable-metrics --clean-after-build
 
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v1
+        continue-on-error: true
+        with:
+          languages: cpp
+
       - name: Meson Configure
         run: |
           meson setup builddir --backend=vs --buildtype=release --optimization=2 --strip
@@ -111,6 +117,10 @@ jobs:
         with:
           path: nwnx4/
           name: nwnx4-${{ github.sha }}
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v1
+        continue-on-error: true
 
   # --------------------------------------------------
 
@@ -256,12 +266,17 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v2
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
         with:
           name: nwnx4-${{ github.sha }}
           path: nwnx4/
 
-      - name: Get release info
+      - name: Compress release
+        run: |
+          zip -r nwnx4.zip nwnx4/
+
+      - name: Extract release info
         shell: bash
         id: rel_info
         run: |
@@ -277,27 +292,41 @@ jobs:
             echo "Not a tagged release"
           fi
 
-      - name: Create Release (if on tag)
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Create Release draft (can fail if already created)
+      #   id: create_release
+      #   uses: actions/create-release@v1
+      #   continue-on-error: true
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     tag_name: ${{ steps.rel_info.outputs.tag }}
+      #     release_name: ${{ steps.rel_info.outputs.tag }}
+      #     prerelease: ${{ steps.rel_info.outputs.prerelease }}
+      #     draft: true
+
+      # - name: Get release upload URL
+      #   id: get_release_url
+      #   run: |
+      #     RELEASE_JSON=$(
+      #       curl -sL --header "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+      #         "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ steps.rel_info.outputs.tag }}"
+      #     )
+      #     echo "::set-output name=upload_url::$(echo "$RELEASE_JSON" | jq -er .upload_url)"
+
+      # - name: Upload Release Asset
+      #   uses: actions/upload-release-asset@v1
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     upload_url: ${{ steps.get_release_url.outputs.upload_url }}
+      #     asset_path: ./nwnx4.zip
+      #     asset_name: nwnx4.zip
+      #     asset_content_type: application/zip
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ steps.rel_info.outputs.tag }}
-          release_name: ${{ steps.rel_info.outputs.tag }}
+          name: ${{ steps.rel_info.outputs.tag }}
           prerelease: ${{ steps.rel_info.outputs.prerelease }}
-
-      - name: Compress release
-        run: |
-          zip -r nwnx4.zip nwnx4/
-
-      - name: Upload Release Asset (if on tag)
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./nwnx4.zip
-          asset_name: nwnx4.zip
-          asset_content_type: application/zip
+          files: nwnx4.zip
+          draft: true
