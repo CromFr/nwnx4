@@ -331,10 +331,14 @@ bool NWNXController::startServerProcessInternal()
                                     nullptr, nullptr, TRUE, dwFlags, nullptr, nwninstalldir.c_str(),
                                     &si, &pi, szDllPath, nullptr))
 	{
+		char* errStr;
 		auto err = GetLastError();
-		logger->Err("DetourCreateProcessWithDll failed: %d", err);
+		FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM| FORMAT_MESSAGE_MAX_WIDTH_MASK ,
+						nullptr, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+						(LPSTR) &errStr, 0, nullptr);
+		logger->Err("DetourCreateProcessWithDll failed with error %d: %s", err, errStr);
 		if (err == 740) {
-			logger->Err("You probably need to run the command as administrator.");
+			logger->Err("Hint: You probably need to run the command as administrator.");
 		}
 		CloseHandle( shmem.ready_event );
 		ZeroMemory( &pi, sizeof( PROCESS_INFORMATION ) );
