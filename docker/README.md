@@ -18,9 +18,6 @@ NWNX4_USERDIR="$PWD/nwnx4-userdir" # Custom NWNX4 files
 NWN2_HOME="$PWD/nwn2-home" # Equivalent of Documents/Neverwinter Nights 2, where your custom content is located
 NWN2_INSTALL="$PWD/nwn2" # NWN2 install folder
 
-# Create the directories
-mkdir -p "$NWNX4_USERDIR" "$NWN2_HOME"
-
 # Run the container
 docker run -it --name=my_nwnx4 \
 	-v "$NWNX4_USERDIR:/srv/nwnx4-userdir" \
