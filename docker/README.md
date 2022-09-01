@@ -10,7 +10,7 @@
 1. Get a copy of the NWN2 install folder. You can optionally follow [these
    instructions](https://nwn.wiki/display/NWN2/Server+setup#Serversetup-Method2:lightserverinstall)
    to reduce the size of the install folder (Warning: it removes official
-   campaigns content).
+   campaigns).
 2. Start the container:
 ```bash
 # Customize the paths on the host
@@ -20,8 +20,6 @@ NWN2_INSTALL="$PWD/nwn2" # NWN2 install folder
 
 # Create the directories
 mkdir -p "$NWNX4_USERDIR" "$NWN2_HOME"
-# Make sure it's writable by user 1000 (mapped to the nwnx user in the container)
-chown 1000:1000 "$NWNX4_USERDIR" "$NWN2_HOME"
 
 # Run the container
 docker run -it --name=my_nwnx4 \
