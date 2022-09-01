@@ -29,7 +29,7 @@ USER nwnx4
 ENV WINEARCH win32
 RUN mkdir -p "$HOME/Documents" \
  && ln -s /srv/nwn2-home "$HOME/Documents/Neverwinter Nights 2" \
- && mkdir -p "$HOME/.wine/drive_c/users/nwnx4/Temp/NWN2/LOGS.0" \
+ && mkdir -p "$HOME/.wine/drive_c/users/nwnx4/Temp/NWN2/" \
  && ln -s /srv/nwn2-logs "$HOME/.wine/drive_c/users/nwnx4/Temp/NWN2/LOGS.0" \
  \
  && xvfb-run wineboot \
