@@ -1,5 +1,6 @@
 FROM debian:bullseye
 
+# Install requirements
 RUN set -x \
  && dpkg --add-architecture i386 \
  && apt-get update \
@@ -28,13 +29,13 @@ RUN useradd --home-dir=/home/nwnx4 --create-home --uid=1000 nwnx4 \
  && chown nwnx4:nwnx4 /srv/nwnx4-userdir /srv/nwn2-home /srv/nwn2-logs
 
 # For debugging only
-# RUN set -x \
-#  && apt-get update \
-#  && apt-get install -y x11vnc htop iproute2 \
-#  && apt-get clean \
-#  && apt-get autoclean \
-#  && apt-get autoremove \
-#  && rm -rf /var/lib/apt/lists/*
+RUN set -x \
+ && apt-get update \
+ && apt-get install -y x11vnc htop iproute2 \
+ && apt-get clean \
+ && apt-get autoclean \
+ && apt-get autoremove \
+ && rm -rf /var/lib/apt/lists/*
 
 # Default user for commands
 USER nwnx4
@@ -44,7 +45,7 @@ ENV WINEARCH win32
 
 # Winetricks:
 #   d3dx9_30 vcrun2005: dependencies for nwn2server
-#   vcrun2019 dotnet48: dependencies for official plugins
+#   vcrun2019 dotnet48 secur32: dependencies for official plugins
 RUN set -x \
  && mkdir -p "$HOME/Documents" \
  && ln -s /srv/nwn2-home "$HOME/Documents/Neverwinter Nights 2" \
@@ -52,7 +53,7 @@ RUN set -x \
  && ln -s /srv/nwn2-logs "$HOME/.wine/drive_c/users/nwnx4/Temp/NWN2/LOGS.0" \
  \
  && xvfb-run bash -c "WINEDLLOVERRIDES='mscoree,mshtml=' wineboot && wineserver --wait" \
- && xvfb-run bash -c "winetricks -q sound=disabled d3dx9_30 vcrun2005 vcrun2019 dotnet48 && wineserver --wait" \
+ && xvfb-run bash -c "winetricks -q sound=disabled d3dx9_30 vcrun2005 vcrun2019 dotnet48 secur32 && wineserver --wait" \
  && xvfb-run bash -c "wine regedit /C /opt/nwn2-reg-keys.reg && wineserver --wait" \
  \
  && rm -rf /tmp/wine* ~/.cache/wine*
