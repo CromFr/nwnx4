@@ -40,6 +40,8 @@ void* NWNXCPlugin_New(NWNXCPlugin_InitInfo info)
 	plugin->logFile << "    dll_path: " << info.dll_path << std::endl;
 	plugin->logFile << "    nwnx_user_path: " << info.nwnx_user_path << std::endl;
 	plugin->logFile << "    nwnx_install_path: " << info.nwnx_install_path << std::endl;
+	plugin->logFile << "    nwnx_version: v" << (int)info.nwnx_version[0] << "."
+	                << (int)info.nwnx_version[1] << "." << (int)info.nwnx_version[2] << std::endl;
 	plugin->logFile << "    nwn2_home_path: " << info.nwn2_home_path << std::endl;
 	plugin->logFile << "    nwn2_install_path: " << info.nwn2_install_path << std::endl;
 	plugin->logFile << "    nwn2_module_path: "

@@ -22,6 +22,8 @@ struct NWNXCPlugin_InitInfo {
 	const char* nwn2_module_path;
 	/// Path to the NWNX4 user directory, where nwnx4_controller.exe is located.
 	const char* nwnx_install_path;
+	/// NWNX4 version numbers {major, minor, revision}
+	uint8_t nwnx_version[3];
 };
 
 //

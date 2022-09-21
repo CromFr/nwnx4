@@ -1,7 +1,42 @@
 #pragma once
 
+#include <cstdint>
+#include <array>
+#include <string>
+
 #define NWNX_VERSION "@VCS_TAG@"
 
 #define NWNX_BUILD_DATE __DATE__ " " __TIME__
 
 #define NWNX_VERSION_INFO NWNX_VERSION " (" NWNX_BUILD_DATE ")"
+
+constexpr std::array<uint8_t, 3> _get_nwnx_version_numbers()
+{
+	std::array<uint8_t, 3> ret = {0};
+
+	std::string_view ver{NWNX_VERSION};
+
+	size_t start = 0;
+	if(ver[0] == 'v')
+		start++;
+
+	for(size_t i = 0 ; i < 3 ; i++){
+		size_t end = ver.find_first_of(".-", start);
+
+		// Manual int conversion
+		for(auto c : ver.substr(start, end - start)){
+			if(c >= '0' && c <= '9'){
+				ret[i] *= 10;
+				ret[i] += c - '0';
+			} else {
+				throw "Invalid character in semver";
+			}
+		}
+
+		start = end + 1;
+	}
+
+	return ret;
+}
+
+static constexpr std::array<uint8_t, 3> NWNX_VERSION_NUMBERS = _get_nwnx_version_numbers();

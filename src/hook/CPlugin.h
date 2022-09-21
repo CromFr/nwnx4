@@ -14,6 +14,7 @@ public:
 		const char* nwn2_home_path;
 		const char* nwn2_module_path;
 		const char* nwnx_install_path;
+		const uint8_t nwnx_version[3];
 	};
 
 	CPlugin(HINSTANCE hDLL, const InitInfo& initInfo);

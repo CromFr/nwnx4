@@ -788,6 +788,8 @@ void loadPlugins()
 				    .nwn2_home_path    = nwn2HomeDir.c_str(),
 				    .nwn2_module_path  = nwn2ModulePathCStr,
 				    .nwnx_install_path = nwnxInstallDirStr.c_str(),
+				    .nwnx_version
+				    = {NWNX_VERSION_NUMBERS[0], NWNX_VERSION_NUMBERS[1], NWNX_VERSION_NUMBERS[2]},
 				};
 
 				// Instantiate & initialize CPlugin
