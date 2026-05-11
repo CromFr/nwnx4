@@ -5,14 +5,13 @@ env:
   nwnlibd_version: v1.0.2
 
 jobs:
-
   # --------------------------------------------------
 
   build:
     name: Build
     runs-on: windows-latest
     env:
-      VCPKG_BINARY_SOURCES: 'clear;nuget,GitHub,readwrite'
+      VCPKG_BINARY_SOURCES: "clear;nuget,GitHub,readwrite"
     steps:
       - uses: actions/checkout@v3
         with:
@@ -30,7 +29,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: "3.x"
       - name: Install Python Dependencies
         run: pip install meson ninja
 
@@ -144,7 +143,7 @@ jobs:
         if: matrix.sql == 'xp_mysql'
         with:
           distribution: mariadb
-          mysql-version: '10.6'
+          mysql-version: "10.6"
           auto-start: true
 
       - name: "Setup MySQL user and database access"
@@ -170,15 +169,32 @@ jobs:
           7z x nwnx4_nwn2server.zip -o/c/
           rm nwnx4_nwn2server.zip
 
-      - name: "Install choco packages"
+      - name: "Install winget packages and tools"
+        shell: powershell
         run: |
-          choco install directx vcredist2010 procdump
+          winget install --source winget --disable-interactivity --accept-package-agreements --accept-source-agreements --exact --id Microsoft.DirectX
+          winget install --source winget --disable-interactivity --accept-package-agreements --accept-source-agreements --exact --id Microsoft.VCRedist.2010.x86
+          # winget install --source winget --disable-interactivity --accept-package-agreements --accept-source-agreements --exact --id Microsoft.Sysinternals.Suite
+
+          # Manually download & install procdump
+          New-Item -ItemType Directory -Path "C:\tools" -Force | Out-Null
+          Invoke-WebRequest `
+              -Uri "https://download.sysinternals.com/files/Procdump.zip" `
+              -OutFile "C:\tools\Procdump.zip"
+
+          # Extract ZIP contents
+          Expand-Archive `
+              -Path "C:\tools\Procdump.zip" `
+              -DestinationPath "C:\tools\" `
+              -Force
+          Remove-Item "C:\tools\Procdump.zip" -Force
         # Note: vcredist2010 is required for xp_ini (msvcr100.dll)
 
       - name: "Enable crash dumps"
+        shell: bash
         run: |
-          mkdir -p "C:\CrashDumps"
-          procdump.exe -i "C:\CrashDumps" -ma -k
+          mkdir -p /c/CrashDumps
+          /c/tools/procdump.exe -accepteula -i "C:\\CrashDumps" -ma -k
 
       # Download the repo for installing test module files
       - uses: actions/checkout@v3
@@ -236,7 +252,7 @@ jobs:
           set -o pipefail
 
           # Start procdump and let it trigger on nwn2server crash
-          procdump -ma -e -w nwn2server.exe "/c/CrashDumps" > /dev/null &
+          /c/tools/procdump.exe -ma -e -w nwn2server.exe "C:\\CrashDumps" > /dev/null &
 
           cd /c/nwnx4_user/
           echo "> $(date --rfc-3339=seconds --utc) Start NWNX4"
