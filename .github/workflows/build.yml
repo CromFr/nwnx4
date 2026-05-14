@@ -169,12 +169,10 @@ jobs:
           7z x nwnx4_nwn2server.zip -o/c/
           rm nwnx4_nwn2server.zip
 
-      - name: "Install winget packages and tools"
+      - name: "Install required packages and tools"
         shell: powershell
         run: |
-          winget install --source winget --disable-interactivity --accept-package-agreements --accept-source-agreements --exact --id Microsoft.DirectX
-          winget install --source winget --disable-interactivity --accept-package-agreements --accept-source-agreements --exact --id Microsoft.VCRedist.2010.x86
-          # winget install --source winget --disable-interactivity --accept-package-agreements --accept-source-agreements --exact --id Microsoft.Sysinternals.Suite
+          choco install directx vcredist2010
 
           # Manually download & install procdump
           New-Item -ItemType Directory -Path "C:\tools" -Force | Out-Null
@@ -188,7 +186,6 @@ jobs:
               -DestinationPath "C:\tools\" `
               -Force
           Remove-Item "C:\tools\Procdump.zip" -Force
-        # Note: vcredist2010 is required for xp_ini (msvcr100.dll)
 
       - name: "Enable crash dumps"
         shell: bash
